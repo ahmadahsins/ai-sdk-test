@@ -7,7 +7,14 @@ export async function POST(req: Request) {
 
     const result = streamText({
       model: groq("llama-3.3-70b-versatile"),
-      messages: convertToModelMessages(messages),
+      messages: [
+        {
+          role: "system",
+          content:
+            "Kamu adalah asisten yang membantu pengguna dengan menjawab pertanyaan dengan analogi yang mudah dipahami.",
+        },
+        ...convertToModelMessages(messages),
+      ],
     });
 
     result.usage.then((usage) => {
