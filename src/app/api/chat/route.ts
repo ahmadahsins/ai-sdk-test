@@ -1,31 +1,27 @@
 import { groq } from "@ai-sdk/groq";
-import { streamText, UIMessage, convertToModelMessages, tool } from "ai";
-import { z } from "zod";
-
-export const maxDuration = 30;
+import { convertToModelMessages, streamText, UIMessage } from "ai";
 
 export async function POST(req: Request) {
-  const { messages }: { messages: UIMessage[] } = await req.json();
+  try {
+    const { messages }: { messages: UIMessage[] } = await req.json();
 
-  const result = streamText({
-    model: groq("llama-3.3-70b-versatile"),
-    messages: convertToModelMessages(messages),
-    tools: {
-      weather: tool({
-        description: "Get the weather in a location (fahrenheit)",
-        inputSchema: z.object({
-          location: z.string().describe("The location to get the weather for"),
-        }),
-        execute: async ({ location }) => {
-          const temperature = Math.round(Math.random() * (90 - 32) + 32);
-          return {
-            location,
-            temperature,
-          };
-        },
-      }),
-    },
-  });
+    const result = streamText({
+      model: groq("llama-3.3-70b-versatile"),
+      messages: convertToModelMessages(messages),
+    });
 
-  return result.toUIMessageStreamResponse();
+    result.usage.then((usage) => {
+      console.log({
+        messageCount: messages.length,
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        totalTokens: usage.totalTokens,
+      });
+    });
+
+    return result.toUIMessageStreamResponse();
+  } catch (error) {
+    console.error("Error streaming chat completion:", error);
+    return new Response("Failed to stream chat completion", { status: 500 });
+  }
 }
